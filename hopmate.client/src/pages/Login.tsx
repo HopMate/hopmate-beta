@@ -28,7 +28,7 @@ const Login: React.FC = () => {
                 username,
                 password,
             });
-            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('token', response.data.Token);
             navigate('/dashboard');
         } catch (error: unknown) {
             const axiosError = error as AxiosError<ErrorResponse>; // Specify the type of the error response

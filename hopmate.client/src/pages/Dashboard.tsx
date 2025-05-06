@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { axiosInstance } from '../axiosConfig';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
+import { useNavigate, Link } from 'react-router-dom';
 
-interface ProtectedData {
-    message: string;
+interface UserInfo {
+    username: string;
+    email?: string;
 }
 
 const Dashboard: React.FC = () => {
-    const [data, setData] = useState<ProtectedData | null>(null);
+    const [user, setUser] = useState<UserInfo | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
-        axiosInstance.get<ProtectedData>('/protecteddata')
-            .then((response) => setData(response.data))
-            .catch((error) => console.error('Error fetching protected data:', error));
+        axiosInstance.get('/dashboard/userinfo')
+            .then((response) => setUser(response.data))
+            .catch((error) => console.error('Erro ao buscar dados protegidos:', error));
     }, []);
 
     const handleLogout = () => {
@@ -23,36 +23,48 @@ const Dashboard: React.FC = () => {
     };
 
     return (
-        <Layout>
-            <section className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-                <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-                    <div className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
-                        <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
-                            <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-                                Welcome to the Dashboard
-                            </h1>
-
-                            <div className="bg-gray-100 p-4 rounded-lg shadow-md">
-                                <h3 className="font-semibold text-gray-900 dark:text-white">Protected Data:</h3>
-                                <pre className="bg-gray-800 text-white p-4 rounded-lg mt-2">
-                                    {JSON.stringify(data, null, 2)}
-                                </pre>
-                            </div>
-
-                            <div className="mt-4">
-                                <button
-                                    onClick={handleLogout}
-                                    type="button"
-                                    className="w-full bg-red-600 text-white font-semibold rounded-lg px-5 py-2.5 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                >
-                                    Log Out
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            {/* Navbar */}
+            <nav className="bg-white dark:bg-gray-800 shadow px-6 py-4 flex justify-between items-center">
+                <div className="flex space-x-4">
+                    <Link to="/" className="text-blue-600 font-semibold hover:underline">Home</Link>
+                    <Link to="/api/trips" className="text-blue-600 font-semibold hover:underline">Trips API</Link>
+                    <Link to="/api/users" className="text-blue-600 font-semibold hover:underline">Users API</Link>
+                    <Link to="/api/vehicles" className="text-blue-600 font-semibold hover:underline">Vehicles API</Link>
                 </div>
-            </section>
-        </Layout>
+                <div className="flex items-center space-x-4">
+                    {user && (
+                        <span className="text-gray-700 dark:text-gray-300">
+                            Olá, <strong>{user.Username}</strong>
+                        </span>
+                    )}
+                    <button
+                        onClick={handleLogout}
+                        className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                    >
+                        Logout
+                    </button>
+                </div>
+            </nav>
+
+            {/* Conteúdo principal */}
+            <main className="p-6 flex flex-col items-center justify-center text-center">
+                <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Dashboard do Projeto</h1>
+                <p className="text-lg text-gray-600 dark:text-gray-300 max-w-xl">
+                    Esta é a interface principal do projeto onde podes navegar pelas APIs, ver dados protegidos e interagir com as funcionalidades do sistema.
+                </p>
+
+                {/* Dados do utilizador */}
+                {user && (
+                    <div className="mt-6 bg-gray-100 dark:bg-gray-800 p-4 rounded shadow w-full max-w-2xl">
+                        <h2 className="text-lg font-semibold text-gray-700 dark:text-white mb-2">Informação do Utilizador</h2>
+                        <pre className="bg-gray-800 text-white p-4 rounded-lg text-left">
+                            {JSON.stringify(user, null, 2)}
+                        </pre>
+                    </div>
+                )}
+            </main>
+        </div>
     );
 };
 

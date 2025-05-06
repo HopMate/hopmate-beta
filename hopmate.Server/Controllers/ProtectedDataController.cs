@@ -3,16 +3,15 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace hopmate.Server.Controllers
 {
-    [Route("api/[controller]")]
+    [Authorize]
     [ApiController]
+    [Route("api/[controller]")]
     public class ProtectedDataController : ControllerBase
     {
-        [HttpGet("protecteddata")]
-        [Authorize]
-        public IActionResult GetProtectedData()
+        [HttpGet]
+        public IActionResult Get()
         {
-            var data = new { message = "This is protected data" };
-            return Ok(data);
+            return Ok(new { message = "Isto é um dado protegido!" });
         }
     }
 }

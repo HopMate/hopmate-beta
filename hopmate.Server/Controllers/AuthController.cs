@@ -1,6 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using hopmate.Server.Models.Dto;
 using hopmate.Server.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using hopmate.Server.Data;
 
 namespace hopmate.Server.Controllers
 {
@@ -10,9 +14,12 @@ namespace hopmate.Server.Controllers
     {
         private readonly AuthService _authService;
 
-        public AuthController(AuthService authService)
+        private readonly ApplicationDbContext _context;
+
+        public AuthController(AuthService authService, ApplicationDbContext context)
         {
             _authService = authService;
+            _context = context;
         }
 
         [HttpPost("register")]
