@@ -12,8 +12,8 @@ using hopmate.Server.Data;
 namespace hopmate.Server.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250505222048_AddDescription-for-Penalty~")]
-    partial class AddDescriptionforPenalty
+    [Migration("20250506171357_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
