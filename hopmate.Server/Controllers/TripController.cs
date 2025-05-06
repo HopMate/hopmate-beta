@@ -1,4 +1,5 @@
-﻿using hopmate.Server.DTOs;
+﻿using hopmate.Server.Data;
+using hopmate.Server.DTOs;
 using hopmate.Server.Models.Dto;
 using hopmate.Server.Models.Entities;
 using hopmate.Server.Services;
@@ -14,10 +15,11 @@ namespace hopmate.Server.Controllers
     public class TripController : ControllerBase
     {
         private readonly TripService _tripService;
-
-        public TripController(TripService tripService)
+        private readonly PenaltyService _penaltyService;
+        public TripController(TripService tripService, PenaltyService penaltyService)
         {
             _tripService = tripService;
+            _penaltyService = penaltyService;
         }
 
         [HttpPost]
@@ -33,10 +35,26 @@ namespace hopmate.Server.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Trip>>> GetTrips()
+        public async Task<IActionResult> GetTrips()
         {
             var trips = await _tripService.GetTripsAsync();
-            return Ok(trips);
+
+            if (trips == null || !trips.Any())
+                return NotFound("No trips found.");
+
+            // Mapeia para DTOs se necessário — boa prática para evitar vazamento de dados sensíveis
+            var tripDtos = trips.Select(t => new TripDto
+            {
+                Id = t.Id,
+                DtDeparture = t.DtDeparture,
+                DtArrival = t.DtArrival,
+                AvailableSeats = t.AvailableSeats,
+                IdDriver = t.IdDriver,
+                IdVehicle = t.IdVehicle,
+                IdStatusTrip = t.IdStatusTrip
+            }).ToList();
+
+            return Ok(tripDtos);
         }
 
         [HttpGet("{id}")]
@@ -84,6 +102,60 @@ namespace hopmate.Server.Controllers
             return NoContent();
         }
 
+        [HttpPost("cancel/{id}")]
+        public async Task<IActionResult> CancelTripDriver(Guid id)
+        {
+            var trip = await _tripService.GetTripAsync(id);
+            if (trip == null)
+                return NotFound("Trip not found.");
+
+            if (trip.IdStatusTrip == 4)
+                return Content("Trip already cancelled");
+
+            int error = await _tripService.CancelTripAsync(id);
+            if (error != 4)
+                return BadRequest("Something went wrong, please try again.");
+
+            List<Guid> passengers = await _tripService.GetPassengerIdsAsync(id);
+            if (!(passengers.Count > 0))
+                return Ok("Trip successfully cancelled!!");
+
+            await _penaltyService.AddPenaltyAsync(new PenaltyDto
+            {
+                IdUser = trip.IdDriver,
+                Hops = 10,
+                Points = 100,
+                Description = "Trip cancelled id:" + trip.Id
+            });
+
+            var origin = await _tripService.GetLocationOrigin(trip.Id);
+            var destination = await _tripService.GetLocationDestination(trip.Id);
+
+            if (origin == null || destination == null)
+                return BadRequest("Trip locations are invalid.");
+
+            TripSimilarityRequestDto tripDto = new TripSimilarityRequestDto
+            {
+                Id = trip.Id,
+                DateDeparture = trip.DtDeparture,
+                DateArrival = trip.DtArrival,
+                PostalOrigin = origin,
+                PostalDestination = destination
+            };
+
+            return Ok(tripDto);
+        }
+
+        [HttpPost("searchsimilar")]
+        public async Task<IActionResult> SearchSimilarTrips([FromBody] TripSimilarityRequestDto dto)
+        {
+            var tripDto = await _tripService.SearchSimilarTripsAsync(dto);
+            if (tripDto == null)
+                return NotFound();
+
+            return Ok(tripDto);
+        }
+
         [HttpGet("driver/{driverId}")]
         public async Task<ActionResult<Driver>> GetDriver(Guid driverId)
         {
@@ -106,18 +178,6 @@ namespace hopmate.Server.Controllers
             }
 
             return Ok(vehicle);
-        }
-
-        [HttpGet("status/{statusId}")]
-        public async Task<ActionResult<TripStatus>> GetTripStatus(Guid statusId)
-        {
-            var tripStatus = await _tripService.GetTripStatusAsync(statusId);
-            if (tripStatus == null)
-            {
-                return NotFound("Trip status not found.");
-            }
-
-            return Ok(tripStatus);
         }
     }
 }

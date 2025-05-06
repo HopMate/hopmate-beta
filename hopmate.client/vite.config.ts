@@ -51,7 +51,7 @@ export default defineConfig({
         proxy: {
             '/api': {
                 target,
-                secure: true, // Enforce HTTPS
+                secure: false, // Enforce HTTPS
                 changeOrigin: true,
             },
         },

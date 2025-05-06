@@ -33,11 +33,17 @@ public class Program
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("ApplicationDbContextConnection")));
 
+        builder.Services.AddControllers().AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+        });
+
         builder.Services.AddScoped<AuthService>();
         builder.Services.AddScoped<ColorService>();
         builder.Services.AddScoped<VehicleService>();
         builder.Services.AddScoped<TripStatusService>();
         builder.Services.AddScoped<TripService>();
+        builder.Services.AddScoped<PenaltyService>();
         builder.Services.AddScoped<RequestStatusService>();
 
         builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()

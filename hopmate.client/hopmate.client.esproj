@@ -14,4 +14,7 @@
     <TypeScriptConfiguration Remove="src\NewFolder1\**" />
     <TypeScriptConfiguration Remove="src\NewFolder\**" />
   </ItemGroup>
+  <ItemGroup>
+    <None Remove="src\pages\TripCancellation\TripStatusCheckPage.tsx" />
+  </ItemGroup>
 </Project>

@@ -4,6 +4,7 @@ namespace hopmate.Server.Models.Dto
 {
     public class TripDto
     {
+        public Guid Id { get; set; }
         public DateTimeOffset DtDeparture { get; set; }
 
         public DateTimeOffset DtArrival { get; set; }

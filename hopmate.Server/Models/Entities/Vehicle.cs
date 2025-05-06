@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace hopmate.Server.Models.Entities
 {
@@ -18,6 +19,7 @@ namespace hopmate.Server.Models.Entities
         public int IdColor { get; set; }
 
         public virtual Color? Color { get; set; }
+        [JsonIgnore]
         public virtual Driver? Driver { get; set; }
         public virtual ICollection<Trip> Trips { get; set; } = new List<Trip>();
     }
