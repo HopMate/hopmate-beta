@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace hopmate.Server.Migrations
 {
     /// <inheritdoc />
-    public partial class DbCreation : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -208,6 +208,7 @@ namespace hopmate.Server.Migrations
                     id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     hops = table.Column<int>(type: "int", nullable: false),
                     points = table.Column<int>(type: "int", nullable: false),
+                    description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     id_user = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>

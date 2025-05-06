@@ -1,131 +1,230 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using hopmate.Server.Models.Entities;
-using hopmate.Server.Services;
 using Microsoft.AspNetCore.Authorization;
+using hopmate.Server.Services;
+using hopmate.Server.Models.DTOs;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Security.Claims;
-using hopmate.Server.Data;
 using Microsoft.EntityFrameworkCore;
+using hopmate.Server.Data;
 
 namespace hopmate.Server.Controllers
 {
-    [Authorize]
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
     public class DriverTripController : ControllerBase
     {
-        private readonly PassengerTripService _passengerTripService;
+        private readonly TripParticipationService _tripParticipationService;
+        private readonly NotificationService _notificationService;
         private readonly ApplicationDbContext _context;
 
-        public DriverTripController(PassengerTripService passengerTripService, ApplicationDbContext context)
+        public DriverTripController(
+            TripParticipationService tripParticipationService,
+            NotificationService notificationService,
+            ApplicationDbContext context)
         {
-            _passengerTripService = passengerTripService;
+            _tripParticipationService = tripParticipationService;
+            _notificationService = notificationService;
             _context = context;
         }
 
-        private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-
-        // GET: api/DriverTrip/requests/{tripId}
-        [HttpGet("requests/{tripId}")]
-        public async Task<ActionResult<List<PassengerTrip>>> GetTripRequests(Guid tripId)
+        // Helper method to check if the current user is the driver of the trip
+        private async Task<bool> IsDriverOfTrip(Guid tripId)
         {
-            var userId = GetUserId();
-
-            // Verificar se o usuário é o motorista desta viagem
-            var trip = await _context.Trips
-                .Include(t => t.Driver)
-                .FirstOrDefaultAsync(t => t.Id == tripId);
-
-            if (trip == null)
-                return NotFound("Trip not found");
-
-            if (trip.Driver.IdUser != userId)
-                return Forbid();
-
-            var requests = await _passengerTripService.GetRequestsByTripIdAsync(tripId);
-            return Ok(requests);
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var trip = await _context.Trips.FirstOrDefaultAsync(t => t.Id == tripId);
+            return trip != null && trip.IdDriver == userId;
         }
 
-        // PUT: api/DriverTrip/accept/{requestId}
-        [HttpPut("accept/{requestId}")]
-        public async Task<ActionResult> AcceptRequest(Guid requestId)
+        // GET: api/DriverTrip/pendingrequests
+        [HttpGet("pendingrequests")]
+        public async Task<ActionResult<IEnumerable<PassengerTripDto>>> GetPendingRequests()
         {
-            var userId = GetUserId();
-            var request = await _context.PassengerTrips
-                .Include(pt => pt.Trip)
-                .ThenInclude(t => t.Driver)
-                .FirstOrDefaultAsync(pt => pt.Id == requestId);
-
-            if (request == null)
-                return NotFound("Request not found");
-
-            if (request.Trip.Driver.IdUser != userId)
-                return Forbid();
-
             try
             {
-                await _passengerTripService.UpdateRequestStatusAsync(requestId, 2); // Accepted
-                return NoContent();
+                // Get the current user's ID
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                var pendingRequests = await _tripParticipationService.GetPendingRequestsForDriverAsync(userId);
+
+                // Map to DTOs
+                var requestDtos = pendingRequests.Select(r => new PassengerTripDto
+                {
+                    Id = r.Id,
+                    PassengerId = r.IdPassenger,
+                    PassengerName = r.Passenger?.User?.Name,
+                    TripId = r.IdTrip,
+                    LocationId = r.IdLocation,
+                    PickupLocation = r.Location?.Address,
+                    RequestStatusId = r.IdRequestStatus,
+                    RequestStatus = r.RequestStatus?.Status,
+                    RequestDate = r.DateRequest,
+                    Reason = r.Reason
+                }).ToList();
+
+                return Ok(requestDtos);
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return StatusCode(500, ex.Message);
             }
         }
 
-        // PUT: api/DriverTrip/reject/{requestId}
-        [HttpPut("reject/{requestId}")]
-        public async Task<ActionResult> RejectRequest(Guid requestId, [FromBody] string reason)
+        // GET: api/DriverTrip/trips/{tripId}/requests
+        [HttpGet("trips/{tripId}/requests")]
+        public async Task<ActionResult<IEnumerable<PassengerTripDto>>> GetTripRequests(Guid tripId)
         {
-            var userId = GetUserId();
-            var request = await _context.PassengerTrips
-                .Include(pt => pt.Trip)
-                .ThenInclude(t => t.Driver)
-                .FirstOrDefaultAsync(pt => pt.Id == requestId);
-
-            if (request == null)
-                return NotFound("Request not found");
-
-            if (request.Trip.Driver.IdUser != userId)
-                return Forbid();
-
-            if (string.IsNullOrWhiteSpace(reason))
-                return BadRequest("Reason is required for rejection");
-
             try
             {
-                await _passengerTripService.UpdateRequestStatusAsync(requestId, 3, reason); // Rejected
-                return NoContent();
+                // Verify the current user is the driver of the trip
+                if (!await IsDriverOfTrip(tripId))
+                {
+                    return Forbid();
+                }
+
+                var requests = await _tripParticipationService.GetRequestsByTripAsync(tripId);
+
+                // Map to DTOs
+                var requestDtos = requests.Select(r => new PassengerTripDto
+                {
+                    Id = r.Id,
+                    PassengerId = r.IdPassenger,
+                    PassengerName = r.Passenger?.User?.Name,
+                    TripId = r.IdTrip,
+                    LocationId = r.IdLocation,
+                    PickupLocation = r.Location?.Address,
+                    RequestStatusId = r.IdRequestStatus,
+                    RequestStatus = r.RequestStatus?.Status,
+                    RequestDate = r.DateRequest,
+                    Reason = r.Reason
+                }).ToList();
+
+                return Ok(requestDtos);
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return StatusCode(500, ex.Message);
             }
         }
 
-        // PUT: api/DriverTrip/waiting-list/{requestId}
-        [HttpPut("waiting-list/{requestId}")]
-        public async Task<ActionResult> MoveToWaitingList(Guid requestId)
+        // POST: api/DriverTrip/accept
+        [HttpPost("accept")]
+        public async Task<ActionResult> AcceptRequest(AcceptRequestDto dto)
         {
-            var userId = GetUserId();
-            var request = await _context.PassengerTrips
-                .Include(pt => pt.Trip)
-                .ThenInclude(t => t.Driver)
-                .FirstOrDefaultAsync(pt => pt.Id == requestId);
-
-            if (request == null)
-                return NotFound("Request not found");
-
-            if (request.Trip.Driver.IdUser != userId)
-                return Forbid();
-
             try
             {
-                await _passengerTripService.UpdateRequestStatusAsync(requestId, 4); // WaitingList
-                return NoContent();
+                // Get the request to check if the current user is the driver
+                var request = await _tripParticipationService.GetRequestByIdAsync(dto.RequestId);
+
+                // Check if the current user is the driver of the trip
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                if (request.Trip?.IdDriver != userId)
+                {
+                    return Forbid();
+                }
+
+                // Accept the request
+                var updatedRequest = await _tripParticipationService.AcceptRequestAsync(dto.RequestId);
+
+                // Send notification to passenger
+                await _notificationService.SendAcceptanceNotificationAsync(dto.RequestId);
+
+                // Send trip booking confirmation
+                await _notificationService.SendTripBookingConfirmationAsync(dto.RequestId);
+
+                return Ok(new { message = "Request accepted successfully" });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        // POST: api/DriverTrip/reject
+        [HttpPost("reject")]
+        public async Task<ActionResult> RejectRequest(RejectRequestDto dto)
+        {
+            try
+            {
+                // Get the request to check if the current user is the driver
+                var request = await _tripParticipationService.GetRequestByIdAsync(dto.RequestId);
+
+                // Check if the current user is the driver of the trip
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                if (request.Trip?.IdDriver != userId)
+                {
+                    return Forbid();
+                }
+
+                // Validate the reason is provided
+                if (string.IsNullOrWhiteSpace(dto.Reason))
+                {
+                    return BadRequest("Rejection reason is required");
+                }
+
+                // Reject the request
+                var updatedRequest = await _tripParticipationService.RejectRequestAsync(dto.RequestId, dto.Reason);
+
+                // Send notification to passenger
+                await _notificationService.SendRejectionNotificationAsync(dto.RequestId);
+
+                return Ok(new { message = "Request rejected successfully" });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        // POST: api/DriverTrip/trips/{tripId}/checkwaitinglist
+        [HttpPost("trips/{tripId}/checkwaitinglist")]
+        public async Task<ActionResult> CheckWaitingList(Guid tripId)
+        {
+            try
+            {
+                // Verify the current user is the driver of the trip
+                if (!await IsDriverOfTrip(tripId))
+                {
+                    return Forbid();
+                }
+
+                // Check waiting list and move passengers if seats are available
+                var movedRequests = await _tripParticipationService.CheckWaitingListAsync(tripId);
+
+                // Send notifications to moved passengers
+                foreach (var request in movedRequests)
+                {
+                    await _notificationService.SendWaitingListNotificationAsync(request.Id);
+                }
+
+                return Ok(new
+                {
+                    message = $"{movedRequests.Count} passengers moved from waiting list to pending status",
+                    movedRequests = movedRequests.Select(r => r.Id).ToList()
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
             }
         }
     }
