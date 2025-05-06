@@ -1,5 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { axiosInstance } from '../../axiosConfig';
 import Layout from '../../components/Layout';
@@ -38,7 +37,7 @@ const CancelTripPage: React.FC = () => {
                 setSimilarityDto(response.data);
                 setStep('confirmSearch');
             }
-        } catch (error: any) {
+        } catch (error: unknown) { 
             if (axios.isAxiosError(error) && error.response) {
                 alert(error.response.data || 'Erro ao cancelar viagem');
             } else {
@@ -66,60 +65,70 @@ const CancelTripPage: React.FC = () => {
 
     return (
         <Layout>
-            <div className="p-4 max-w-xl mx-auto">
-                {step === 'initial' && (
-                    <div>
-                        <h2 className="text-xl font-bold mb-4">Cancelar viagem</h2>
-                        <button
-                            onClick={handleCancelTrip}
-                            disabled={isCooldown}
-                            className={`px-4 py-2 rounded text-white transition ${isCooldown ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
-                                }`}
-                        >
-                            {isCooldown ? 'Aguarde...' : 'Confirmar cancelamento'}
-                        </button>
-                    </div>
-                )}
+            <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center px-4 py-8">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 sm:p-8 w-full max-w-md">
+                    {step === 'initial' && (
+                        <>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                                Cancelar Viagem
+                            </h2>
+                            <button
+                                onClick={handleCancelTrip}
+                                disabled={isCooldown}
+                                className={`w-full px-4 py-2 rounded text-white font-semibold transition ${isCooldown ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+                                    }`}
+                            >
+                                {isCooldown ? 'Aguarde...' : 'Confirmar Cancelamento'}
+                            </button>
+                        </>
+                    )}
 
-                {step === 'confirmSearch' && (
-                    <div>
-                        <p className="mb-4">Viagem cancelada com sucesso. Queres procurar uma semelhante?</p>
-                        <button
-                            onClick={handleSearchSimilar}
-                            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2"
-                        >
-                            Sim
-                        </button>
-                        <button
-                            onClick={resetFlow}
-                            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-                        >
-                            Não
-                        </button>
-                    </div>
-                )}
-
-                {step === 'showResult' && (
-                    <div>
-                        <h3 className="text-lg font-semibold mb-2">Viagem semelhante encontrada:</h3>
-                        {similarTrip ? (
-                            <div className="bg-gray-100 p-4 rounded shadow">
-                                <p><strong>ID:</strong> {similarTrip.id}</p>
-                                <p><strong>Partida:</strong> {new Date(similarTrip.dtDeparture).toLocaleString()}</p>
-                                <p><strong>Chegada:</strong> {new Date(similarTrip.dtArrival).toLocaleString()}</p>
+                    {step === 'confirmSearch' && (
+                        <>
+                            <p className="text-gray-700 dark:text-gray-300 mb-4">
+                                Viagem cancelada com sucesso. Deseja procurar uma semelhante?
+                            </p>
+                            <div className="flex flex-col sm:flex-row justify-between gap-2">
+                                <button
+                                    onClick={handleSearchSimilar}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                                >
+                                    Sim
+                                </button>
+                                <button
+                                    onClick={resetFlow}
+                                    className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                                >
+                                    Não
+                                </button>
                             </div>
-                        ) : (
-                            <p>Nenhuma viagem semelhante foi encontrada.</p>
-                        )}
-                        <button
-                            onClick={resetFlow}
-                            className="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                        >
-                            Voltar
-                        </button>
-                    </div>
-                )}
-            </div>
+                        </>
+                    )}
+
+                    {step === 'showResult' && (
+                        <>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                                Viagem Semelhante Encontrada
+                            </h3>
+                            {similarTrip ? (
+                                <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded shadow text-sm text-gray-900 dark:text-gray-100">
+                                    <p><strong>ID:</strong> {similarTrip.id}</p>
+                                    <p><strong>Partida:</strong> {new Date(similarTrip.dtDeparture).toLocaleString()}</p>
+                                    <p><strong>Chegada:</strong> {new Date(similarTrip.dtArrival).toLocaleString()}</p>
+                                </div>
+                            ) : (
+                                <p className="text-gray-700 dark:text-gray-300">Nenhuma viagem semelhante foi encontrada.</p>
+                            )}
+                            <button
+                                onClick={resetFlow}
+                                className="mt-4 w-full bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                            >
+                                Voltar
+                            </button>
+                        </>
+                    )}
+                </div>
+            </section>
         </Layout>
     );
 };
