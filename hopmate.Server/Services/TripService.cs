@@ -128,7 +128,7 @@ namespace hopmate.Server.Services
             // Excluir a viagem original (dto.IdTrip) da pesquisa
             var trip = await _context.Trips
                 .Where(t =>
-                    t.Id != dto.Id && // 👈 Excluir a própria viagem
+                    t.Id != dto.Id &&
                     _context.TripLocations.Any(tl => tl.IdTrip == t.Id && tl.IsStart && originIds.Contains(tl.IdLocation)) &&
                     _context.TripLocations.Any(tl => tl.IdTrip == t.Id && !tl.IsStart && destinationIds.Contains(tl.IdLocation))
                 )
@@ -152,7 +152,53 @@ namespace hopmate.Server.Services
             };
         }
 
+        public async Task<List<TripSummaryDto>> GetDriverTripsAsync(Guid userId)
+        {
+            return await _context.Trips
+                .Where(t => t.IdDriver == userId)
+                .Include(t => t.TripLocations)
+                    .ThenInclude(tl => tl.Location)
+                .Select(t => new TripSummaryDto
+                {
+                    TripId = t.Id,
+                    DepartureTime = t.DtDeparture,
+                    ArrivalTime = t.DtArrival,
+                    StartLocation = t.TripLocations
+                        .Where(loc => loc.IsStart)
+                        .Select(loc => loc.Location.Address)
+                        .FirstOrDefault() ?? "N/D",
+                    EndLocation = t.TripLocations
+                        .Where(loc => !loc.IsStart)
+                        .Select(loc => loc.Location.Address)
+                        .FirstOrDefault() ?? "N/D",
+                })
+                .ToListAsync();
+        }
 
+        public async Task<List<TripSummaryDto>> GetPassengerTripsAsync(Guid userId)
+        {
+            return await _context.PassengerTrips
+                .Where(pt => pt.IdPassenger == userId)
+                .Include(pt => pt.Trip)
+                    .ThenInclude(t => t.TripLocations)
+                        .ThenInclude(tl => tl.Location)
+                .Select(pt => new TripSummaryDto
+                {
+                    TripId = pt.Trip.Id,
+                    DepartureTime = pt.Trip.DtDeparture,
+                    ArrivalTime = pt.Trip.DtArrival,
+                    StartLocation = pt.Trip.TripLocations
+                        .Where(loc => loc.IsStart)
+                        .Select(loc => loc.Location.Address)
+                        .FirstOrDefault() ?? "N/D",
+                    EndLocation = pt.Trip.TripLocations
+                        .Where(loc => !loc.IsStart)
+                        .Select(loc => loc.Location.Address)
+                        .FirstOrDefault() ?? "N/D",
+                    DriverName = pt.Trip.Driver.User.Name,
+                })
+                .ToListAsync();
+        }
 
         public async Task<Trip?> UpdateTripAsync(Guid id, TripDto tripDto)
         {

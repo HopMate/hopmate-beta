@@ -15,7 +15,8 @@ const Login: React.FC = () => {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (token) {
+        const userId = localStorage.getItem('userId');
+        if (token && userId) {
             navigate('/dashboard');
         }
     }, [navigate]);
@@ -29,6 +30,7 @@ const Login: React.FC = () => {
                 password,
             });
             localStorage.setItem('token', response.data.Token);
+            localStorage.setItem('userId', response.data.userId);
             navigate('/dashboard');
         } catch (error: unknown) {
             const axiosError = error as AxiosError<ErrorResponse>; // Specify the type of the error response

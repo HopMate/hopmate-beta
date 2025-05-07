@@ -26,6 +26,7 @@ const Layout: React.FC<Props> = ({ children }) => {
 
     const handleLogout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('userId');
         navigate('/login');
     };
 
@@ -35,9 +36,9 @@ const Layout: React.FC<Props> = ({ children }) => {
             <nav className="bg-white dark:bg-gray-800 shadow px-6 py-4 flex justify-between items-center">
                 <div className="flex space-x-4">
                     <Link to="/" className="text-blue-600 font-semibold hover:underline">Home</Link>
-                    <Link to="/api/trips" className="text-blue-600 font-semibold hover:underline">Trips API</Link>
-                    <Link to="/api/users" className="text-blue-600 font-semibold hover:underline">Users API</Link>
-                    <Link to="/api/vehicles" className="text-blue-600 font-semibold hover:underline">Vehicles API</Link>
+                    <Link to="/trips" className="text-blue-600 font-semibold hover:underline">Trips API</Link>
+                    <Link to="/users" className="text-blue-600 font-semibold hover:underline">Users API</Link>
+                    <Link to="/vehicles" className="text-blue-600 font-semibold hover:underline">Vehicles API</Link>
                 </div>
                 <div className="flex items-center space-x-4">
                     {user && (

@@ -4,6 +4,7 @@ using hopmate.Server.Models.Dto;
 using hopmate.Server.Models.Entities;
 using hopmate.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -70,6 +71,50 @@ namespace hopmate.Server.Controllers
 
             return Ok(existingTrip);
         }
+
+        // Viagens como condutor
+        [HttpGet("user/{userId}/driver-trips")]
+        public async Task<IActionResult> GetDriverTrips(Guid userId)
+        {
+            var driverTrips = await _tripService.GetDriverTripsAsync(userId);
+
+            if (driverTrips == null || !driverTrips.Any())
+                return NotFound("Nenhuma viagem encontrada como condutor.");
+
+            var result = driverTrips.Select(t => new
+            {
+                TripId = t.TripId,
+                DepartureTime = t.DepartureTime,
+                ArrivalTime = t.ArrivalTime,
+                StartLocation = t.StartLocation,
+                EndLocation = t.EndLocation
+            });
+
+            return Ok(result);
+        }
+
+        // Viagens como passageiro
+        [HttpGet("user/{userId}/passenger-trips")]
+        public async Task<IActionResult> GetPassengerTrips(Guid userId)
+        {
+            var passengerTrips = await _tripService.GetPassengerTripsAsync(userId);
+
+            if (passengerTrips == null || !passengerTrips.Any())
+                return NotFound("Nenhuma viagem encontrada como passageiro.");
+
+            var result = passengerTrips.Select(pt => new
+            {
+                TripId = pt.TripId,
+                DepartureTime = pt.DepartureTime,
+                ArrivalTime = pt.ArrivalTime,
+                StartLocation = pt.StartLocation,
+                EndLocation = pt.EndLocation,
+                DriverName = pt.DriverName
+            });
+
+            return Ok(result);
+        }
+
 
         [HttpPut("{id}")]
         public async Task<ActionResult<Trip>> UpdateTrip(Guid id, [FromBody] TripDto tripDto)
