@@ -17,22 +17,22 @@ namespace hopmate.Server.Controllers
     {
         private readonly TripService _tripService;
         private readonly PenaltyService _penaltyService;
-        public TripController(TripService tripService, PenaltyService penaltyService)
+        private readonly DriverService _driverService;
+
+        public TripController(TripService tripService, PenaltyService penaltyService, DriverService driverService)
         {
             _tripService = tripService;
             _penaltyService = penaltyService;
+            _driverService = driverService;
         }
 
         [HttpPost]
-        public async Task<ActionResult<Trip>> CreateTrip([FromBody] TripDto tripDto)
+        public async Task<IActionResult> CreateTrip([FromBody] CreateTripDto dto)
         {
-            if (tripDto == null)
-            {
-                return BadRequest("Trip data is invalid.");
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var createdTrip = await _tripService.CreateTripAsync(tripDto);
-            return CreatedAtAction(nameof(GetTrip), new { id = createdTrip.Id }, createdTrip);
+            var tripId = await _tripService.CreateTripAsync(dto);
+            return Ok(new { tripId });
         }
 
         [HttpGet]
@@ -150,6 +150,12 @@ namespace hopmate.Server.Controllers
         [HttpPost("cancel/{id}")]
         public async Task<IActionResult> CancelTripDriver(Guid id)
         {
+            bool isDriver = await _driverService.IsDriver(id);
+            if (isDriver)
+            {
+                return Forbid("Not a Driver");
+            }
+
             var trip = await _tripService.GetTripAsync(id);
             if (trip == null)
                 return NotFound("Trip not found.");

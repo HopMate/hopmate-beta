@@ -53,5 +53,14 @@ namespace hopmate.Server.Controllers
 
             return driver;
         }
+
+        [HttpGet("isdriver/{id}")]
+        public async Task<ActionResult<bool>> IsDriver(Guid id)
+        {
+            var exists = await _context.Drivers.AnyAsync(d => d.IdUser == id);
+
+            return Ok(exists);
+        }
+        
     }
 }

@@ -8,27 +8,50 @@ namespace hopmate.Server.Services
     public class TripService
     {
         private readonly ApplicationDbContext _context;
+        private readonly LocationService _locationService;
 
-        public TripService(ApplicationDbContext context)
+        public TripService(ApplicationDbContext context, LocationService locationService)
         {
             _context = context;
+            _locationService = locationService;
         }
 
-        public async Task<Trip> CreateTripAsync(TripDto tripDto)
+        public async Task<Guid> CreateTripAsync(CreateTripDto dto)
         {
             var trip = new Trip
             {
-                DtDeparture = tripDto.DtDeparture,
-                DtArrival = tripDto.DtArrival,
-                AvailableSeats = tripDto.AvailableSeats,
-                IdDriver = tripDto.IdDriver,
-                IdVehicle = tripDto.IdVehicle,
-                IdStatusTrip = tripDto.IdStatusTrip
+                Id = Guid.NewGuid(),
+                DtDeparture = dto.DepartureTime,
+                DtArrival = dto.ArrivalTime,
+                IdDriver = dto.DriverId
             };
 
             _context.Trips.Add(trip);
             await _context.SaveChangesAsync();
-            return trip;
+
+            var startLocation = await _locationService.GetOrCreateAsync(dto.StartLocation);
+            var endLocation = await _locationService.GetOrCreateAsync(dto.EndLocation);
+
+            var startRelation = new TripLocation
+            {
+                Id = Guid.NewGuid(),
+                IdTrip = trip.Id,
+                IdLocation = startLocation.Id,
+                IsStart = true
+            };
+
+            var endRelation = new TripLocation
+            {
+                Id = Guid.NewGuid(),
+                IdTrip = trip.Id,
+                IdLocation = endLocation.Id,
+                IsStart = false
+            };
+
+            _context.TripLocations.AddRange(startRelation, endRelation);
+            await _context.SaveChangesAsync();
+
+            return trip.Id;
         }
 
         public async Task<List<Trip>> GetTripsAsync()

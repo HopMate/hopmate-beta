@@ -1,4 +1,3 @@
-// src/pages/TripList.tsx
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { axiosInstance } from '../../axiosConfig';
@@ -10,14 +9,27 @@ interface Trip {
     arrivalTime: string;
     startLocation?: string;
     endLocation?: string;
-    driverName?: string; // Apenas presente em trips como passageiro
+    driverName?: string;
 }
 
 const TripList: React.FC = () => {
     const [trips, setTrips] = useState<Trip[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isDriver, setIsDriver] = useState(false);
     const [view, setView] = useState<'driver' | 'passenger'>('driver');
     const userId = localStorage.getItem('userId');
+
+    useEffect(() => {
+        if (!userId) return;
+
+        // Verifica se é condutor
+        axiosInstance.get(`/driver/isdriver/${userId}`)
+            .then((res) => setIsDriver(res.data === true))
+            .catch((err) => {
+                console.error("Erro ao verificar se é condutor:", err);
+                setIsDriver(false);
+            });
+    }, [userId]);
 
     useEffect(() => {
         if (!userId) return;
@@ -33,7 +45,7 @@ const TripList: React.FC = () => {
             .get(endpoint)
             .then((response) => {
                 const data = response.data;
-                const tripsArray = Array.isArray(data) ? data : data.$values; // <-- aqui está a magia
+                const tripsArray = Array.isArray(data) ? data : data.$values;
                 setTrips(tripsArray || []);
             })
             .catch((error) => {
@@ -42,7 +54,6 @@ const TripList: React.FC = () => {
             })
             .finally(() => setLoading(false));
     }, [view, userId]);
-
 
     return (
         <Layout>
@@ -71,7 +82,7 @@ const TripList: React.FC = () => {
                         </button>
                     </div>
 
-                    {view === 'driver' && (
+                    {isDriver && view === 'driver' && (
                         <Link
                             to="/trip/create"
                             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
@@ -102,7 +113,7 @@ const TripList: React.FC = () => {
                             </thead>
                             <tbody>
                                 {trips.map((trip) => (
-                                    <tr key={trip.TripId} className="border-t border-gray-200 dark:border-gray-700">
+                                    <tr key={trip.tripId} className="border-t border-gray-200 dark:border-gray-700">
                                         <td className="px-4 py-2">
                                             {new Date(trip.DepartureTime).toLocaleString()}
                                         </td>
@@ -139,6 +150,6 @@ const TripList: React.FC = () => {
             </section>
         </Layout>
     );
-}
+};
 
 export default TripList;
